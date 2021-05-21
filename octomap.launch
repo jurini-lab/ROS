@@ -1,0 +1,48 @@
+<launch>
+    <arg name="colored" default="true"/>
+
+    <!--node pkg="rosbag" type="play" name="rosbag_player" args="/home/jurini_ws/src/bag_from_unity_simulation.bag"/-->
+
+    <node pkg="topic_tools" type="relay" name="relay_back_lidar" args="/back_lslidar_point_cloud cloud_merged"/>
+    <node pkg="topic_tools" type="relay" name="relay_front_lidar" args="/front_lslidar_point_cloud cloud_merged"/>
+
+    <node pkg="octomap_pkg" type="pcl_colorer" name="pcl_colorer" if="$(arg colored)" output="screen">
+        <remap from="pcl_input" to="cloud_merged"/>
+        <remap from="pcl_colored" to="cloud_colored"/>
+
+        <!-- change the color of the octomap here-->
+        <param name="r" value="255"/>
+        <param name="g" value="0"/>
+        <param name="b" value="0"/>
+    </node>
+
+
+    <node pkg="octomap_server" type="octomap_server_node" name="octomap_server" unless="$(arg colored)">
+         <remap from="cloud_in" to="cloud_merged"/>
+        <!--<remap from="cloud_in" to="/front_lslidar_point_cloud"/>-->
+        <!--<remap from="cloud_in" to="/back_lslidar_point_cloud"/>-->
+
+        <param name="frame_id" value="map"/>
+        <param name="base_frame_id" value="bobcat_base"/>
+        <param name="resolution" value="0.5"/>
+        <param name="sensor_model/max_range" value="-1"/>
+    </node>
+
+    <node pkg="octomap_server" type="octomap_color_server_node" name="color_octomap_server" if="$(arg colored)">
+        <remap from="cloud_in" to="cloud_colored"/>
+        <!--<remap from="cloud_in" to="/front_lslidar_point_cloud"/>-->
+        <!--<remap from="cloud_in" to="/back_lslidar_point_cloud"/>-->
+
+        <param name="frame_id" value="map"/>
+        <param name="base_frame_id" value="bobcat_base"/>
+        <param name="resolution" value="0.5"/>
+        <param name="sensor_model/max_range" value="-1"/>
+
+        <!-- make sure you set height map to false otherwise height_map overwrites colored_map
+        see https://github.com/OctoMap/octomap_mapping/blob/kinetic-devel/octomap_server/src/OctomapServer.cpp
+        -->
+        <param name="height_map" value="false"/>
+        <param name="colored_map" value="true"/>
+        <param name="color_factor" value="0.8"/>
+    </node>
+</launch>
